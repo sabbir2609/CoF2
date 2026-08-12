@@ -1,0 +1,13 @@
+ecut 50 Ry (6x6x8), total energy = -792.70659377 Ry
+ecut 60 Ry (6x6x8), total energy = -792.98833751 Ry
+ecut 70 Ry (6x6x8), total energy = -793.04030207 Ry
+ecut 80 Ry (6x6x8), total energy = -793.04689722 Ry
+ecut 90 Ry (6x6x8), total energy = -793.04715826 Ry
+ecut 100 Ry (6x6x8), total energy = -793.04735070 Ry
+ecut 110 Ry (6x6x8), total energy = -793.04777949 Ry
+
+
+ecut 90 Ry (6x6x8), total energy = -793.04715826 Ry
+ecut 90 Ry (8x8x12), total energy = -793.04715810 Ry
+ecut 90 Ry (10x10x14), total energy = -793.04715808 Ry
+ecut 90 Ry (12x12x16), total energy = -793.04715811 Ry
