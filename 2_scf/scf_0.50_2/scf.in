@@ -1,0 +1,54 @@
+&CONTROL
+  calculation   = 'scf'
+  outdir        = './out/'
+  prefix        = 'aiida'
+  pseudo_dir    = './pseudo/'
+  verbosity     = 'high'
+/
+
+&SYSTEM
+  ibrav         = 0
+  nat           = 6
+  ntyp          = 3
+  nspin         = 2
+  nosym         = .false.
+  ecutwfc       = 90.0
+  ecutrho       = 1080.0
+  occupations   = 'smearing'
+  smearing      = 'cold'
+  degauss       = 0.01
+  starting_magnetization(1) =  0.5
+  starting_magnetization(2) = -0.5
+  starting_magnetization(3) =  0.0
+/
+
+&ELECTRONS
+  conv_thr         = 1.0d-09
+  electron_maxstep = 50
+  mixing_beta      = 0.3
+/
+
+ATOMIC_SPECIES
+  Co1  58.933195  co_pbesol_v1.2.uspp.F.UPF
+  Co2  58.933195  co_pbesol_v1.2.uspp.F.UPF
+  F    18.998403  F.oncvpsp.upf
+
+ATOMIC_POSITIONS crystal
+Co1              0.0000000000        0.0000000000        0.0000000000
+Co2              0.5000000000        0.5000000000        0.5000000000
+F                0.1965122296        0.8034877704        0.5000000000
+F                0.8034877704        0.1965122296        0.5000000000
+F                0.6965122427        0.6965122427        0.0000000000
+F                0.3034877573        0.3034877573        0.0000000000
+
+K_POINTS automatic
+  8 8 12 0 0 0
+
+CELL_PARAMETERS angstrom
+   4.682872721   0.000000026   0.000000000
+   0.000000026   4.682872721   0.000000000
+   0.000000000   0.000000000   3.165523122
+
+HUBBARD ortho-atomic
+  U Co1-3d 3.0
+  U Co2-3d 3.0
