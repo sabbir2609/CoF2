@@ -1,5 +1,13 @@
 &INPUTHP
-  prefix = 'aiida'
-  outdir = './out/'
-  determine_num_pert_only = .true.
+   prefix          = 'aiida'
+   outdir          = './out/'
+   nq1             = 2
+   nq2             = 2
+   nq3             = 3
+   find_atpert     = 4
+   conv_thr_chi    = 1.0d-5
+   iverbosity      = 2
+
+   compute_hp = .true.
 /
+

@@ -1,6 +1,0 @@
-&INPUTHP
-  prefix = 'aiida'
-  outdir = './out/'
-  find_atpert = 4
-  determine_num_pert_only = .true.
-/
