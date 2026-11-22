@@ -12,7 +12,9 @@
 /
 
 &SYSTEM
-  ibrav         = 0
+  ibrav         = 6
+  celldm(1)     = 8.774980
+  celldm(3)     = 0.688953
   nat           = 6
   ntyp          = 3
   nspin         = 2
@@ -40,7 +42,7 @@
 &CELL
   cell_dynamics  = 'bfgs'
   press_conv_thr = 0.2
-  cell_dofree    = 'all'
+  cell_dofree    = 'ibrav'
 /
 
 ATOMIC_SPECIES
@@ -58,11 +60,6 @@ ATOMIC_POSITIONS crystal
 
 K_POINTS automatic
   8 8 12 0 0 0
-
-CELL_PARAMETERS angstrom
-  4.6435194100  0.0000000000  0.0000000000
-  0.0000000000  4.6435194100  0.0000000000
-  0.0000000000  0.0000000000  3.1991646900
 
 HUBBARD ortho-atomic
   U Co1-3d 6.26
