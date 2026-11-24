@@ -6,7 +6,7 @@ exclude_bands = 1-24
 dis_win_min   = -2.0
 dis_win_max   = 16.0
 dis_froz_min  = -2.0
-dis_froz_max  = 9.39
+dis_froz_max  = 9.41
 dis_num_iter  = 500
 
 num_iter      = 300
