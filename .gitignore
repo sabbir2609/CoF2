@@ -1,1 +1,18 @@
+# Quantum ESPRESSO binary output
 out/
+*.xml
+*.dat
+*.update
+
+# Pseudopotential files (large, downloadable)
+pseudo/
+
+# Wannier90 binary/large files
+*.chk
+*.mmn
+*.amn
+*.eig
+*.nnkp
+
+# Jupyter
+.ipynb_checkpoints/
