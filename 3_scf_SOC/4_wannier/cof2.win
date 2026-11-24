@@ -9,9 +9,11 @@ dis_froz_min  = -2.0
 dis_froz_max  = 9.41
 dis_num_iter  = 500
 
-num_iter      = 300
+num_iter      = 2000
 conv_tol      = 1.0d-10
 conv_window   = 5
+
+write_hr      = .true.
 
 bands_plot       = .true.
 bands_num_points = 100
