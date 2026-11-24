@@ -1,0 +1,9 @@
+&INPUTPP
+  outdir         = './out/'
+  prefix         = 'soc'
+  seedname       = 'cof2'
+  spin_component = 'none'
+  write_mmn      = .true.
+  write_amn      = .true.
+  write_unk      = .false.
+/

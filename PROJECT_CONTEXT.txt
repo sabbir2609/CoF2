@@ -1,0 +1,246 @@
+================================================================================
+PROJECT CONTEXT: CoF2 DFT+U Simulation (Quantum ESPRESSO)
+================================================================================
+
+MATERIAL: Cobalt Difluoride (CoF2)
+GOAL: Study altermagnetic properties of CoF2 using DFT+U (PBEsol functional),
+      including structural relaxation, Hubbard U determination, magnetic phase
+      comparison, spin-orbit coupling (SOC), and Wannier90 band interpolation.
+
+REFERENCE LINKS:
+  - PRB paper: https://journals.aps.org/prb/abstract/10.1103/PhysRevB.74.195118
+  - Altermagnet DB: https://altermagnets.anyterial.se/material?id=anyt:am-1-0008
+  - QE input generator: https://qeinputgenerator.materialscloud.io/
+
+CRYSTAL STRUCTURE:
+  - Space group: tetragonal (ibrav=6, P4_2/mnm, rutile-type)
+  - Experimental lattice: a = 4.6435 Å, c = 3.1992 Å (c/a ≈ 0.6890)
+  - 6 atoms/cell: 2x Co (Co1 spin-up, Co2 spin-down), 4x F
+  - Co1 at (0,0,0), Co2 at (0.5,0.5,0.5) — antiferromagnetic sublattices
+  - F at fractional positions ~(0.196, 0.804, 0.5) and symmetry equivalents
+  - Pseudopotentials:
+      Co: co_pbesol_v1.2.uspp.F.UPF (USPP, non-relativistic, for collinear)
+          Co.pbesol-spn-kjpaw_psl.0.3.1.UPF (PAW, non-relativistic)
+          Co.rel-pbesol-spn-kjpaw_psl.0.3.1.UPF (PAW, fully relativistic, for SOC)
+      F:  F.oncvpsp.upf (ONCV norm-conserving)
+
+================================================================================
+WORKFLOW STAGES
+================================================================================
+
+--- STAGE 0: Convergence Tests (0_conv/) ---
+  Purpose: Determine converged ecutwfc and k-point mesh.
+  Code: Quantum ESPRESSO pw.x (SCF)
+  Setup: nspin=2, antiferromagnetic (Co1 up, Co2 down), no Hubbard U
+         Starting magnetization: Co1=+0.294, Co2=-0.294, F=+0.1
+         k-mesh: 6x6x8 for ecut tests; ecut=90 Ry for k-mesh tests
+
+  Ecut convergence (6x6x8 k-mesh):
+    50 Ry  → -792.70659377 Ry
+    60 Ry  → -792.98833751 Ry
+    70 Ry  → -793.04030207 Ry
+    80 Ry  → -793.04689722 Ry
+    90 Ry  → -793.04715826 Ry  ← CHOSEN (converged ~0.3 mRy from 80→90)
+    100 Ry → -793.04735070 Ry
+    110 Ry → -793.04777949 Ry
+
+  K-mesh convergence (ecut=90 Ry):
+    6x6x8   → -793.04715826 Ry  ← CHOSEN
+    8x8x12  → -793.04715810 Ry
+    10x10x14→ -793.04715808 Ry
+    12x12x16→ -793.04715811 Ry
+
+  CONCLUSION: ecutwfc=90 Ry, ecutrho=1080 Ry, k-mesh=8x8x12 (used in later steps)
+  Script: script.ipynb (convergence plotting)
+
+--- STAGE 1: Variable-Cell Relaxation v1 (1_vc_relax/v1/) ---
+  Purpose: Initial structural relaxation with a trial U value.
+  Code: pw.x (vc-relax), BFGS optimizer
+  ibrav=0 (explicit CELL_PARAMETERS), cell_dofree='all'
+  Hubbard U: Co1-3d = 3.0 eV, Co2-3d = 3.0 eV (initial guess)
+  Starting cell: a=4.6435 Å, c=3.1992 Å
+  k-mesh: 8x8x12, degauss=0.01 Ry (cold smearing)
+
+--- STAGE 2: Self-Consistent Field + Hubbard U (2_scf/) ---
+  Purpose: Iterative DFT+U+HP self-consistency to determine U.
+  Code: pw.x (SCF) + hp.x (linear-response Hubbard U)
+  Method: Antiferromagnetic, tot_magnetization=0, occupations='fixed'
+  Cell: from vc-relax v1 output (ibrav=0, a≈4.6829 Å, c≈3.1655 Å)
+  HP q-mesh: 2x2x3, find_atpert=4
+
+  Iteration 1 (scf_0.50_1/):
+    Input U: Co1=Co2=3.0 eV
+    HP output U: Co1=Co2=6.0743 eV
+
+  Iteration 2 (scf_0.50_2/):
+    Input U: Co1=Co2=6.0743 eV
+    HP output U: Co1≈6.2629 eV, Co2≈6.2625 eV
+
+  CONCLUSION: U converged to ~6.26 eV for both Co sites.
+  Note: scf_0.50/ and scf_0.99/ are earlier/alternative setups (checks).
+
+--- STAGE 2b: Variable-Cell Relaxation v2 (1_vc_relax/v2/) 
+  Purpose: Final structural relaxation using the self-consistent U=6.26 eV.
+  Code: pw.x (vc-relax), BFGS optimizer
+  ibrav=6 (tetragonal), cell_dofree='ibrav' (preserves tetragonal symmetry)
+  Hubbard U: Co1-3d = 6.26 eV, Co2-3d = 6.26 eV
+  Starting celldm(1)=8.774980 a.u., celldm(3)=0.688953
+  k-mesh: 8x8x12, degauss=0.01 Ry (cold smearing)
+  Final enthalpy: -792.9339196411 Ry
+  Final relaxed structure:
+    celldm(1) = 8.910990 a.u. → a = 4.7155 Å
+    celldm(3) = 0.674647     → c = 3.1813 Å
+    Volume: 477.37 a.u.³ (70.74 Å³), density: 4.551 g/cm³
+    F position: (0.1957467430, 0.8042532570, 0.5000000000)
+
+--- STAGE 2 (Magnetic Phases): SCF for AM/FM/NM (2_scf_am/, 2_scf_fm/, 2_scf_nm/) ---
+  Purpose: Compare total energies of altermagnet (AM), ferromagnet (FM),
+           and non-magnetic (NM) phases.
+  Code: pw.x (SCF)
+  Cell: from vc-relax v2 (ibrav=6, celldm(1)=8.910991, celldm(3)=0.674649)
+  Hubbard U: Co1=Co2=6.26 eV (ortho-atomic)
+  k-mesh: 8x8x12, ecutwfc=90 Ry, degauss=0.01 Ry (cold smearing)
+  Diagonalization: CG
+
+  2_scf_am/ (Altermagnet — antiferromagnetic):
+    starting_magnetization: Co1=+0.5, Co2=-0.5, F=0.0
+    Final energy:      -792.93389612 Ry
+    Total magnetization:    0.00 μB/cell
+    Absolute magnetization: 5.86 μB/cell
+
+  2_scf_fm/ (Ferromagnet):
+    starting_magnetization: Co1=+0.5, Co2=+0.5, F=0.0
+    Final energy:      -792.93231242 Ry
+    Total magnetization:    6.00 μB/cell
+    Absolute magnetization: 6.02 μB/cell
+
+  2_scf_nm/ (Non-magnetic):
+    nspin=1 (no spin polarization)
+    Final energy:      -792.49969244 Ry
+    Converged in 24 iterations
+
+  ENERGY COMPARISON (relative to AM):
+    AM:  -792.93389612 Ry  (lowest → ground state)
+    FM:  -792.93231242 Ry  (+0.00158 Ry = +20.9 meV above AM)
+    NM:  -792.49969244 Ry  (+0.43420 Ry = +5.91 eV above AM)
+
+  run.sh: Shell script to extract energies and magnetizations from all three outputs.
+
+--- STAGE 3: FindSym Analysis (3_findsym/) ---
+  Purpose: Identify space group symmetry of the relaxed structure.
+  Tool: FINDSYM (https://iso.byu.edu/findsymform.php)
+  Files: along_c_1.cif, along_c_2.cif — CIF files for symmetry analysis
+         (two orientations/configurations along c-axis)
+
+--- STAGE 3: SCF with Spin-Orbit Coupling (3_scf_SOC/) ---
+  Purpose: Include SOC for relativistic electronic structure and Wannier90.
+  Cell: ibrav=6, celldm(1)=8.910991, celldm(3)=0.674649 (from vc-relax v2)
+  Hubbard U: Co1=Co2=6.26 eV
+
+  Step 1 — Collinear SCF with PAW (1_scf_rel/):
+    Pseudopotential: Co.pbesol-spn-kjpaw_psl.0.3.1.UPF (non-relativistic PAW)
+    nspin=2, tot_magnetization=0, nbnd=40
+    occupations='fixed', k-mesh=8x8x12
+    Final energy: -944.91279288 Ry (converged in 33 iterations)
+    Note: Higher energy than USPP runs due to different PP (PAW all-electron)
+
+  Step 2 — Collinear SCF with USPP (2_scf_us/):
+    Pseudopotential: co_pbesol_v1.2.uspp.F.UPF (same as main workflow)
+    Cross-check calculation
+
+  Step 3 — Non-collinear SOC SCF (3_soc/):
+    Pseudopotential: Co.rel-pbesol-spn-kjpaw_psl.0.3.1.UPF (fully relativistic PAW)
+    noncolin=.true., lspinorb=.true.
+    Spin orientation: Co1 angle1=90°, angle2=45° (in-plane)
+                      Co2 angle1=90°, angle2=225° (antiparallel in-plane)
+    conv_thr=5e-9, mixing_ndim=10, diagonalization='david'
+    Final energy: -945.02783540 Ry (converged in 91 iterations)
+
+  Step 4 — Wannier90 (4_wannier/):
+    Purpose: Maximally localized Wannier functions (MLWFs) for band interpolation.
+    Code: pw.x (NSCF) → pw2wannier90.x → wannier90.x
+    spinors=.true. (spinor Wannier functions for SOC)
+    num_wann=44, num_bands=56, exclude_bands=1-24
+    Projections: Co1:d, Co2:d, F:p
+    Disentanglement window: [-2.0, 16.0] eV, frozen: [-2.0, 9.39] eV
+    dis_num_iter=500, num_iter=300, conv_tol=1e-10
+    k-mesh: 6x6x8 (288 k-points)
+    Band path: G→X→M→G→Z→R→A→Z (tetragonal BZ)
+    Wannier spread after 300 iterations: ~32.26 Å² (still converging at iter 300)
+    Output files: cof2.amn, cof2.mmn, cof2.eig, cof2.chk, cof2.wout
+    Band plot: cof2_band.dat, cof2_band.gnu, plot.ipynb
+
+================================================================================
+KEY PARAMETERS SUMMARY
+================================================================================
+
+  Functional:       PBEsol (GGA)
+  DFT+U method:     Hubbard U (ortho-atomic projectors, QE hp.x)
+  Hubbard U (Co-3d): 6.26 eV (self-consistently determined)
+  ecutwfc:          90 Ry
+  ecutrho:          1080 Ry (12x wfc cutoff, for USPP)
+  k-mesh (SCF):     8x8x12
+  Smearing:         Cold smearing, degauss=0.01 Ry
+  conv_thr:         1e-9 Ry (SCF), 5e-9 Ry (SOC SCF)
+
+  Relaxed lattice (v2 vc-relax, U=6.26 eV):
+    a = 4.7155 Å  [celldm(1)=8.910990 a.u.]
+    c = 3.1813 Å  [celldm(3)=0.674647]
+    c/a = 0.6747
+
+================================================================================
+FILE STRUCTURE
+================================================================================
+
+CoF2/
+├── CoF2.cif                    — Initial CIF structure file
+├── README.md                   — Reference links
+├── run.sh                      — Shell script: extract energies/magnetizations
+├── .gitignore
+├── 0_conv/                     — Ecut and k-mesh convergence tests
+│   ├── pwscf.in                — Template SCF input (AM, no U)
+│   ├── scf_ecut_*.in/out       — Ecut series (50–110 Ry)
+│   ├── scf_kpts_*.in/out       — K-mesh series
+│   ├── data.txt / note.txt     — Convergence data summary
+│   └── script.ipynb            — Convergence plotting notebook
+├── 1_vc_relax/
+│   ├── v1/                     — vc-relax, ibrav=0, U=3.0 eV
+│   └── v2/                     — vc-relax, ibrav=6, U=6.26 eV (final)
+├── 2_scf/                      — HP Hubbard U self-consistency
+│   ├── scf_0.50_1/             — Iter 1: U=3.0→6.07 eV
+│   ├── scf_0.50_2/             — Iter 2: U=6.07→6.26 eV (converged)
+│   ├── scf_0.50/               — Earlier attempt (no output)
+│   └── scf_0.99/               — Alternative starting magnetization
+├── 2_scf_am/                   — AM phase SCF (ground state)
+├── 2_scf_fm/                   — FM phase SCF
+├── 2_scf_nm/                   — NM phase SCF
+├── 3_findsym/                  — Space group analysis (FINDSYM)
+│   ├── along_c_1.cif
+│   ├── along_c_2.cif
+│   └── info.txt
+├── 3_scf_SOC/                  — SOC calculations + Wannier90
+│   ├── 1_scf_rel/              — Collinear SCF with PAW (non-rel)
+│   ├── 2_scf_us/               — Collinear SCF with USPP
+│   ├── 3_soc/                  — Non-collinear SOC SCF (fully-rel PAW)
+│   └── 4_wannier/              — Wannier90 MLWFs + band interpolation
+└── PWscf/                      — Scratch/template input
+
+================================================================================
+PHYSICS CONTEXT
+================================================================================
+
+CoF2 is a rutile-structure antiferromagnet (AFM) that has been identified as
+an altermagnet — a new class of magnetic material with zero net magnetization
+but spin-split electronic bands due to crystal symmetry (not SOC).
+
+Key physics:
+  - Altermagnetism: Co1 (spin-up) and Co2 (spin-down) are related by a
+    rotation (not inversion/translation), breaking time-reversal symmetry
+    in k-space → spin-split bands even without SOC.
+  - The AM phase is the ground state, lower than FM by ~21 meV/cell.
+  - DFT+U is needed to correctly describe Co-3d correlations.
+  - SOC + Wannier90 enables calculation of anomalous Hall conductivity,
+    spin Hall conductivity, and other topological/transport properties.
+  - The Wannier basis (Co-d + F-p) captures the relevant bands near E_F.
+
+================================================================================
