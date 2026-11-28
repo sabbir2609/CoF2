@@ -15,8 +15,16 @@ conv_window   = 5
 
 write_hr      = .true.
 
-bands_plot       = .true.
+# bands_plot       = .false. 
 bands_num_points = 100
+
+berry            = .true.
+berry_task       = ahc
+berry_kmesh      = 50 50 75
+fermi_energy_min = 4.0
+fermi_energy_max = 10.5
+fermi_energy_step = 0.05
+
 
 begin kpoint_path
 G 0.00 0.00 0.00  X 0.00 0.50 0.00
